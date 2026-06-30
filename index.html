@@ -1,0 +1,1350 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Q2C 直播标注平台</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC','Hiragino Sans GB',sans-serif;background:#f5f7fa;color:#262626;font-size:14px}
+:root{--primary:#1677ff;--primary-light:#e6f4ff;--success:#52c41a;--warning:#faad14;--error:#ff4d4f;--text:#262626;--text2:#595959;--text3:#8c8c8c;--border:#d9d9d9;--bg:#f5f7fa;--white:#fff}
+
+/* Layout */
+.app{display:flex;height:100vh;overflow:hidden}
+.sidebar{width:200px;background:#001529;flex-shrink:0;display:flex;flex-direction:column;overflow:hidden}
+.sidebar-logo{padding:16px 20px;border-bottom:1px solid #1a2d42;color:#fff;font-size:16px;font-weight:600;display:flex;align-items:center;gap:8px}
+.sidebar-logo span{font-size:20px}
+.sidebar-nav{flex:1;padding:8px 0;overflow-y:auto}
+.nav-item{display:flex;align-items:center;gap:10px;padding:12px 20px;color:#aaa;cursor:pointer;transition:all .2s;font-size:13px}
+.nav-item:hover{background:#0d2137;color:#fff}
+.nav-item.active{background:var(--primary);color:#fff}
+.nav-item .icon{font-size:16px;width:20px;text-align:center}
+.sidebar-footer{padding:12px 20px;border-top:1px solid #1a2d42;color:#aaa;font-size:12px}
+
+.main{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.header{background:var(--white);border-bottom:1px solid var(--border);padding:0 24px;height:52px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+.header-title{font-size:16px;font-weight:600;color:var(--text)}
+.header-right{display:flex;align-items:center;gap:12px}
+.role-switch{display:flex;background:#f0f0f0;border-radius:6px;padding:3px}
+.role-btn{padding:4px 12px;border-radius:4px;cursor:pointer;font-size:12px;transition:all .2s;color:var(--text2)}
+.role-btn.active{background:var(--white);color:var(--primary);box-shadow:0 1px 4px rgba(0,0,0,.12);font-weight:500}
+.user-info{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--text2)}
+.avatar{width:28px;height:28px;border-radius:50%;background:var(--primary);color:#fff;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600}
+.content{flex:1;overflow-y:auto;padding:20px 24px}
+.page{display:none}
+.page.active{display:block}
+
+/* Cards */
+.stat-cards{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:24px}
+.stat-card{background:var(--white);border-radius:8px;padding:20px;border:1px solid var(--border)}
+.stat-card .label{color:var(--text3);font-size:13px;margin-bottom:8px}
+.stat-card .value{font-size:28px;font-weight:700;color:var(--text);line-height:1.2}
+.stat-card .sub{font-size:12px;color:var(--text3);margin-top:6px}
+.stat-card.blue .value{color:var(--primary)}
+.stat-card.green .value{color:var(--success)}
+.stat-card.orange .value{color:var(--warning)}
+
+/* Buttons */
+.btn{display:inline-flex;align-items:center;gap:6px;padding:7px 16px;border-radius:6px;cursor:pointer;font-size:14px;border:1px solid transparent;transition:all .2s;line-height:1.4}
+.btn-primary{background:var(--primary);color:#fff;border-color:var(--primary)}
+.btn-primary:hover{background:#0958d9}
+.btn-default{background:var(--white);color:var(--text);border-color:var(--border)}
+.btn-default:hover{border-color:var(--primary);color:var(--primary)}
+.btn-sm{padding:4px 12px;font-size:12px}
+.btn-text{background:none;border-color:transparent;color:var(--primary);padding:4px 8px}
+.btn-text:hover{background:var(--primary-light)}
+.btn-danger{background:var(--error);color:#fff;border-color:var(--error)}
+
+/* Table */
+.table-container{background:var(--white);border-radius:8px;border:1px solid var(--border);overflow:hidden}
+.table-toolbar{padding:16px 16px 12px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #f0f0f0}
+.table-toolbar-right{display:flex;gap:8px}
+table{width:100%;border-collapse:collapse}
+th{background:#fafafa;padding:11px 16px;text-align:left;font-weight:500;color:var(--text2);font-size:13px;border-bottom:1px solid #f0f0f0;white-space:nowrap}
+td{padding:12px 16px;border-bottom:1px solid #f5f5f5;color:var(--text);font-size:13px;vertical-align:middle}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:#fafafa}
+
+/* Tags */
+.tag{display:inline-flex;align-items:center;padding:2px 8px;border-radius:4px;font-size:12px;font-weight:500}
+.tag-blue{background:#e6f4ff;color:#1677ff}
+.tag-orange{background:#fff7e6;color:#d46b08}
+.tag-green{background:#f6ffed;color:#389e0d}
+.tag-gray{background:#f5f5f5;color:#8c8c8c}
+.tag-red{background:#fff2f0;color:#cf1322}
+
+/* Progress */
+.progress-wrap{display:flex;align-items:center;gap:8px}
+.progress-bar{flex:1;height:6px;background:#f0f0f0;border-radius:3px;overflow:hidden;min-width:80px}
+.progress-bar-inner{height:100%;background:var(--primary);border-radius:3px;transition:width .3s}
+.progress-text{font-size:12px;color:var(--text3);white-space:nowrap}
+
+/* Modal */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:1000;display:none;align-items:center;justify-content:center}
+.modal-overlay.open{display:flex}
+.modal{background:var(--white);border-radius:8px;width:500px;max-height:80vh;overflow:hidden;display:flex;flex-direction:column;box-shadow:0 6px 40px rgba(0,0,0,.15)}
+.modal-header{padding:16px 24px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.modal-header h3{font-size:16px;font-weight:600}
+.modal-close{cursor:pointer;color:var(--text3);font-size:18px;line-height:1;padding:4px}
+.modal-close:hover{color:var(--text)}
+.modal-body{padding:20px 24px;overflow-y:auto;flex:1}
+.modal-footer{padding:12px 24px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;gap:8px}
+
+/* Form */
+.form-item{margin-bottom:16px}
+.form-label{display:block;margin-bottom:6px;font-size:13px;color:var(--text2);font-weight:500}
+.form-label .required{color:var(--error);margin-left:2px}
+.form-input,.form-select,.form-textarea{width:100%;padding:8px 12px;border:1px solid var(--border);border-radius:6px;font-size:13px;color:var(--text);outline:none;transition:border .2s;font-family:inherit}
+.form-input:focus,.form-select:focus,.form-textarea:focus{border-color:var(--primary);box-shadow:0 0 0 2px rgba(22,119,255,.1)}
+.form-textarea{resize:vertical;min-height:80px}
+.checkbox-group{display:flex;flex-direction:column;gap:8px}
+.checkbox-item{display:flex;align-items:center;gap:8px;cursor:pointer;padding:8px 12px;border-radius:6px;border:1px solid var(--border);transition:all .2s}
+.checkbox-item:hover{border-color:var(--primary);background:var(--primary-light)}
+.checkbox-item.checked{border-color:var(--primary);background:var(--primary-light)}
+.checkbox-item input{accent-color:var(--primary)}
+
+/* Annotation page */
+.anno-header{background:var(--white);border:1px solid var(--border);border-radius:8px;padding:12px 20px;display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
+.anno-nav{display:flex;align-items:center;gap:12px}
+.anno-counter{font-size:14px;color:var(--text);font-weight:500}
+.anno-counter span{color:var(--primary)}
+.anno-progress-wrap{display:flex;align-items:center;gap:10px;flex:1;max-width:300px;margin:0 20px}
+.anno-layout{display:grid;grid-template-columns:3fr 2fr;gap:16px;height:calc(100vh - 200px);min-height:500px}
+.anno-content{background:var(--white);border:1px solid var(--border);border-radius:8px;overflow-y:auto;padding:20px}
+.anno-score{background:var(--white);border:1px solid var(--border);border-radius:8px;overflow-y:auto;padding:20px;display:flex;flex-direction:column}
+.content-block{margin-bottom:18px}
+.content-block-title{font-size:12px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;display:flex;align-items:center;gap:6px}
+.content-block-title .dot{width:6px;height:6px;border-radius:50%;background:var(--primary)}
+.content-text{font-size:14px;color:var(--text);line-height:1.7;background:#f9fafb;border-radius:6px;padding:12px;border:1px solid #f0f0f0}
+.collapsible-header{display:flex;align-items:center;justify-content:space-between;cursor:pointer;padding:8px 12px;background:#f9fafb;border-radius:6px;border:1px solid #f0f0f0;margin-bottom:4px;user-select:none}
+.collapsible-header:hover{background:#f0f5ff}
+.collapsible-content{display:none;font-size:14px;line-height:1.7;color:var(--text);background:#f9fafb;border-radius:0 0 6px 6px;padding:12px;border:1px solid #f0f0f0;border-top:none;margin-bottom:8px}
+.collapsible-content.open{display:block}
+.arrow{transition:transform .2s;color:var(--text3)}
+.arrow.open{transform:rotate(90deg)}
+
+.dim-block{margin-bottom:18px;padding-bottom:18px;border-bottom:1px solid #f0f0f0}
+.dim-block:last-of-type{border-bottom:none}
+.dim-title{font-size:13px;font-weight:600;color:var(--text);margin-bottom:10px;display:flex;align-items:center;gap:6px}
+.dim-num{width:20px;height:20px;border-radius:50%;background:var(--primary);color:#fff;font-size:11px;display:flex;align-items:center;justify-content:center;font-weight:700;flex-shrink:0}
+.score-btns{display:flex;gap:8px;margin-bottom:8px}
+.score-btn{flex:1;padding:8px 4px;border:1.5px solid var(--border);border-radius:6px;cursor:pointer;text-align:center;font-size:13px;font-weight:500;color:var(--text2);background:var(--white);transition:all .2s;user-select:none}
+.score-btn:hover{border-color:var(--primary);color:var(--primary)}
+.score-btn.selected{background:var(--primary);border-color:var(--primary);color:#fff;box-shadow:0 2px 6px rgba(22,119,255,.3)}
+.score-hint{font-size:11px;color:var(--text3);margin-bottom:8px;line-height:1.5;padding:0 4px}
+.reason-input{width:100%;padding:7px 10px;border:1px solid var(--border);border-radius:6px;font-size:12px;color:var(--text);resize:none;height:52px;font-family:inherit;outline:none;transition:border .2s}
+.reason-input:focus{border-color:var(--primary);box-shadow:0 0 0 2px rgba(22,119,255,.1)}
+.uncertain-block{padding:14px;background:#fffbe6;border:1px solid #ffe58f;border-radius:8px;margin-top:4px}
+.uncertain-label{display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;font-weight:500;color:#8b5e00}
+.uncertain-label input{accent-color:var(--warning);width:16px;height:16px}
+.anno-actions{margin-top:16px;display:flex;gap:10px}
+.anno-actions .btn{flex:1;justify-content:center}
+
+/* Filter bar */
+.filter-bar{background:var(--white);border:1px solid var(--border);border-radius:8px;padding:16px;margin-bottom:16px;display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end}
+.filter-item{display:flex;flex-direction:column;gap:4px}
+.filter-item label{font-size:12px;color:var(--text3);font-weight:500}
+.filter-item select,.filter-item input{padding:6px 10px;border:1px solid var(--border);border-radius:6px;font-size:13px;color:var(--text);outline:none;min-width:120px}
+.filter-item select:focus,.filter-item input:focus{border-color:var(--primary)}
+
+/* Charts */
+.chart-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:16px;margin-bottom:24px}
+.chart-card{background:var(--white);border:1px solid var(--border);border-radius:8px;padding:20px}
+.chart-title{font-size:14px;font-weight:600;color:var(--text);margin-bottom:4px}
+.chart-subtitle{font-size:12px;color:var(--text3);margin-bottom:16px}
+.bar-chart{display:flex;gap:12px;align-items:flex-end;height:120px;margin-bottom:8px}
+.bar-group{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px}
+.bar{width:100%;border-radius:4px 4px 0 0;transition:all .3s;min-height:4px;position:relative}
+.bar:hover::after{content:attr(data-val);position:absolute;top:-20px;left:50%;transform:translateX(-50%);font-size:11px;color:var(--text);background:rgba(0,0,0,.75);color:#fff;padding:2px 6px;border-radius:3px;white-space:nowrap}
+.bar-label{font-size:11px;color:var(--text3)}
+.chart-stats{display:flex;gap:16px;padding-top:12px;border-top:1px solid #f0f0f0}
+.chart-stat{font-size:12px;color:var(--text3)}
+.chart-stat strong{color:var(--text);font-weight:600}
+
+/* Permission page styles */
+.perm-layout{display:grid;grid-template-columns:200px 1fr;gap:16px;min-height:500px}
+.perm-tabs{background:var(--white);border:1px solid var(--border);border-radius:8px;overflow:hidden}
+.perm-tab{padding:14px 16px;cursor:pointer;border-left:3px solid transparent;transition:all .2s;font-size:13px;display:flex;align-items:center;gap:8px}
+.perm-tab:hover{background:#f5f7fa}
+.perm-tab.active{border-left-color:var(--primary);background:var(--primary-light);color:var(--primary);font-weight:500}
+.perm-content{background:var(--white);border:1px solid var(--border);border-radius:8px;padding:24px;overflow-y:auto}
+.perm-section{display:none}.perm-section.active{display:block}
+.role-cards{display:grid;grid-template-columns:repeat(2,1fr);gap:14px;margin-bottom:24px}
+.role-card{border:1.5px solid var(--border);border-radius:8px;padding:18px;transition:all .2s;cursor:default}
+.role-card.selected{border-color:var(--primary);background:var(--primary-light)}
+.role-card-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+.role-name{font-size:14px;font-weight:600;display:flex;align-items:center;gap:6px}
+.role-badge{padding:2px 8px;border-radius:10px;font-size:11px;font-weight:500}
+.role-desc{font-size:12px;color:var(--text3);line-height:1.6;margin-bottom:12px}
+.role-perms{display:flex;flex-wrap:wrap;gap:6px}
+.perm-tag{padding:3px 10px;border-radius:4px;font-size:11px;background:#f0f5ff;color:var(--primary);border:1px solid #d6e8ff}
+.member-table-wrap{background:var(--white);border-radius:8px}
+.member-search{display:flex;gap:10px;margin-bottom:14px;align-items:center}
+.role-select-cell{padding:4px 8px;border:1px solid var(--border);border-radius:6px;font-size:13px;color:var(--text);outline:none;cursor:pointer}
+.role-select-cell:focus{border-color:var(--primary)}
+.switch-wrap{display:flex;align-items:center;gap:8px}
+.switch{width:36px;height:20px;border-radius:10px;background:#d9d9d9;position:relative;cursor:pointer;transition:background .2s;flex-shrink:0}
+.switch.on{background:var(--primary)}
+.switch::after{content:'';position:absolute;top:2px;left:2px;width:16px;height:16px;border-radius:50%;background:#fff;transition:left .2s;box-shadow:0 1px 3px rgba(0,0,0,.2)}
+.switch.on::after{left:18px}
+.perm-matrix{width:100%;border-collapse:collapse;margin-top:4px}
+.perm-matrix th{background:#fafafa;padding:10px 14px;text-align:left;font-size:12px;font-weight:600;color:var(--text3);border-bottom:1px solid #f0f0f0;white-space:nowrap}
+.perm-matrix td{padding:12px 14px;border-bottom:1px solid #f5f5f5;font-size:13px;vertical-align:middle}
+.perm-matrix tr:last-child td{border-bottom:none}
+.perm-check{width:18px;height:18px;accent-color:var(--primary);cursor:pointer}
+.perm-group-header{background:#f5f7fa;font-size:12px;font-weight:600;color:var(--text2);padding:8px 14px;letter-spacing:.3px}
+.chat-container{background:var(--white);border:1px solid var(--border);border-radius:8px;height:calc(100vh - 180px);display:flex;flex-direction:column;overflow:hidden}
+.chat-header{padding:16px 20px;border-bottom:1px solid var(--border);background:#fafafa}
+.chat-scope{font-size:13px;color:var(--text3)}
+.chat-scope strong{color:var(--text)}
+.chat-messages{flex:1;overflow-y:auto;padding:20px;display:flex;flex-direction:column;gap:14px}
+.msg{max-width:75%;display:flex;flex-direction:column;gap:4px}
+.msg.user{align-self:flex-end;align-items:flex-end}
+.msg.ai{align-self:flex-start;align-items:flex-start}
+.msg-bubble{padding:10px 14px;border-radius:10px;font-size:13px;line-height:1.6}
+.msg.user .msg-bubble{background:var(--primary);color:#fff;border-radius:10px 10px 0 10px}
+.msg.ai .msg-bubble{background:#f0f0f0;color:var(--text);border-radius:10px 10px 10px 0}
+.msg-time{font-size:11px;color:var(--text3)}
+.chat-quick{padding:10px 20px;display:flex;gap:8px;flex-wrap:wrap;border-top:1px solid #f0f0f0;background:#fafafa}
+.quick-btn{padding:6px 12px;background:var(--white);border:1px solid var(--border);border-radius:16px;font-size:12px;cursor:pointer;color:var(--text2);transition:all .2s}
+.quick-btn:hover{border-color:var(--primary);color:var(--primary);background:var(--primary-light)}
+.chat-input-area{padding:12px 20px;border-top:1px solid var(--border);display:flex;gap:10px;align-items:flex-end}
+.chat-input{flex:1;padding:9px 14px;border:1px solid var(--border);border-radius:8px;font-size:13px;outline:none;font-family:inherit;resize:none;max-height:120px;min-height:38px}
+.chat-input:focus{border-color:var(--primary);box-shadow:0 0 0 2px rgba(22,119,255,.1)}
+
+/* Criteria */
+.criteria-layout{display:grid;grid-template-columns:180px 1fr;gap:16px;height:calc(100vh - 160px);min-height:500px}
+.dim-list{background:var(--white);border:1px solid var(--border);border-radius:8px;overflow:hidden}
+.dim-tab{padding:14px 16px;cursor:pointer;border-left:3px solid transparent;transition:all .2s;font-size:13px}
+.dim-tab:hover{background:#f5f7fa}
+.dim-tab.active{border-left-color:var(--primary);background:var(--primary-light);color:var(--primary);font-weight:500}
+.criteria-edit{background:var(--white);border:1px solid var(--border);border-radius:8px;padding:24px;overflow-y:auto}
+.criteria-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:20px}
+.criteria-header h3{font-size:16px;font-weight:600}
+.score-criteria{margin-bottom:16px;padding:16px;border:1px solid var(--border);border-radius:8px}
+.score-criteria-header{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+.score-badge{width:28px;height:28px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;flex-shrink:0}
+.score-badge.s1{background:#fff2f0;color:#cf1322}
+.score-badge.s2{background:#fff7e6;color:#d46b08}
+.score-badge.s3{background:#f6ffed;color:#389e0d}
+.score-badge.s4{background:#e6f4ff;color:#0958d9}
+.criteria-textarea{width:100%;padding:8px 12px;border:1px solid var(--border);border-radius:6px;font-size:13px;color:var(--text);resize:vertical;min-height:72px;font-family:inherit;outline:none;line-height:1.6}
+.criteria-textarea:focus{border-color:var(--primary);box-shadow:0 0 0 2px rgba(22,119,255,.1)}
+
+/* Quick actions */
+.quick-actions{display:flex;gap:12px;margin-bottom:24px}
+.quick-action-card{flex:1;background:var(--white);border:1px solid var(--border);border-radius:8px;padding:16px;cursor:pointer;transition:all .2s;display:flex;align-items:center;gap:12px}
+.quick-action-card:hover{border-color:var(--primary);box-shadow:0 2px 8px rgba(22,119,255,.12)}
+.qa-icon{font-size:24px}
+.qa-text{font-size:13px;font-weight:500;color:var(--text)}
+.qa-sub{font-size:12px;color:var(--text3);margin-top:2px}
+
+.page-header{margin-bottom:18px;display:flex;align-items:center;justify-content:space-between}
+.page-title{font-size:18px;font-weight:600;color:var(--text)}
+.page-desc{font-size:13px;color:var(--text3);margin-top:2px}
+.detail-panel{padding:16px;background:#f9fafb;border-radius:8px;margin-top:8px;border:1px solid #f0f0f0;display:none;font-size:13px;line-height:1.7}
+.detail-panel.open{display:block}
+.detail-row{display:flex;gap:8px;margin-bottom:6px}
+.detail-label{color:var(--text3);min-width:80px;flex-shrink:0}
+.detail-val{color:var(--text)}
+.score-cell{width:32px;height:24px;border-radius:4px;display:inline-flex;align-items:center;justify-content:center;font-size:12px;font-weight:600}
+.sc1{background:#fff2f0;color:#cf1322}
+.sc2{background:#fff7e6;color:#d46b08}
+.sc3{background:#f6ffed;color:#389e0d}
+.sc4{background:#e6f4ff;color:#0958d9}
+.empty{text-align:center;padding:40px;color:var(--text3);font-size:13px}
+.badge-uncertain{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;background:#fff7e6;border:1px solid #ffd591;border-radius:4px;font-size:11px;color:#d46b08}
+.section-title{font-size:15px;font-weight:600;color:var(--text);margin-bottom:14px;padding-bottom:10px;border-bottom:1px solid #f0f0f0}
+.overview-cards{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:20px}
+.ov-card{background:var(--white);border:1px solid var(--border);border-radius:8px;padding:18px;text-align:center}
+.ov-card .ov-label{font-size:12px;color:var(--text3);margin-bottom:8px}
+.ov-card .ov-val{font-size:26px;font-weight:700}
+.ov-card .ov-val.blue{color:var(--primary)}
+.ov-card .ov-val.green{color:var(--success)}
+.typing{display:inline-flex;gap:4px;padding:10px 14px;background:#f0f0f0;border-radius:10px 10px 10px 0}
+.typing span{width:6px;height:6px;border-radius:50%;background:#aaa;animation:bounce .8s infinite}
+.typing span:nth-child(2){animation-delay:.15s}
+.typing span:nth-child(3){animation-delay:.3s}
+@keyframes bounce{0%,100%{transform:translateY(0)}50%{transform:translateY(-5px)}}
+</style>
+</head>
+<body>
+<div class="app">
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="sidebar-logo"><span>📊</span>Q2C 标注平台</div>
+    <nav class="sidebar-nav">
+      <div class="nav-item active" data-page="dashboard"><span class="icon">🏠</span>首页</div>
+      <div class="nav-item" data-page="datasets"><span class="icon">📋</span>标注集管理</div>
+      <div class="nav-item" data-page="annotate"><span class="icon">✏️</span>标注工作台</div>
+      <div class="nav-item" data-page="results"><span class="icon">📊</span>结果汇总</div>
+      <div class="nav-item" data-page="report"><span class="icon">📈</span>分析报告</div>
+      <div class="nav-item" data-page="chatbot"><span class="icon">💬</span>对话分析</div>
+      <div class="nav-item" data-page="criteria"><span class="icon">⚙️</span>评分标准</div>
+      <div class="nav-item" data-page="prompt"><span class="icon">🤖</span>Prompt管理</div>
+      <div class="nav-item" data-page="permission"><span class="icon">🔐</span>权限管理</div>
+    </nav>
+    <div class="sidebar-footer">v1.2.0 · 内部工具</div>
+  </aside>
+  <!-- Main -->
+  <main class="main">
+    <header class="header">
+      <div class="header-title">Q2C 直播内容标注平台</div>
+      <div class="header-right">
+        <div style="display:flex;align-items:center;gap:6px;padding:4px 12px;background:#e6f4ff;border-radius:6px;font-size:12px;color:var(--primary)">
+          <span>🔐</span><span>如流账号登录</span>
+        </div>
+        <div class="user-info"><div class="avatar">丁</div><span>dingbohao</span><span style="color:var(--text3);font-size:11px">｜超级管理员</span></div>
+      </div>
+    </header>
+    <div class="content" id="content">
+
+<!-- PAGE: Dashboard -->
+<div class="page active" id="page-dashboard">
+  <div class="page-header">
+    <div><div class="page-title">首页</div><div class="page-desc">Q2C 标注任务总览</div></div>
+    <span class="tag tag-blue">2026-06-30</span>
+  </div>
+  <div class="stat-cards">
+    <div class="stat-card blue"><div class="label">标注批次总数</div><div class="value">12</div><div class="sub">较上月 +3</div></div>
+    <div class="stat-card orange"><div class="label">进行中批次</div><div class="value">3</div><div class="sub">待完成</div></div>
+    <div class="stat-card"><div class="label">总标注条数</div><div class="value">1,450</div><div class="sub">本月新增 320</div></div>
+    <div class="stat-card green"><div class="label">整体完成率</div><div class="value">81%</div><div class="sub">↑ 较上批次 +6%</div></div>
+  </div>
+  <div class="quick-actions">
+    <div class="quick-action-card" onclick="switchPage('datasets')"><span class="qa-icon">📋</span><div><div class="qa-text">标注集管理</div><div class="qa-sub">创建批次并分发给标注员</div></div></div>
+    <div class="quick-action-card" onclick="switchPage('annotate')"><span class="qa-icon">✏️</span><div><div class="qa-text">开始标注</div><div class="qa-sub">进入我的标注任务</div></div></div>
+    <div class="quick-action-card" onclick="switchPage('report')"><span class="qa-icon">📈</span><div><div class="qa-text">查看报告</div><div class="qa-sub">分析标注结果与维度分布</div></div></div>
+    <div class="quick-action-card" onclick="switchPage('permission')"><span class="qa-icon">🔐</span><div><div class="qa-text">权限管理</div><div class="qa-sub">配置人员角色与操作权限</div></div></div>
+  </div>
+  <div class="table-container">
+    <div class="table-toolbar"><span style="font-weight:600;font-size:14px">最近批次</span></div>
+    <table>
+      <thead><tr><th>批次名称</th><th>行业</th><th>数据量</th><th>分发状态</th><th>标注进度</th><th>创建时间</th></tr></thead>
+      <tbody>
+        <tr><td>医疗行业_2026Q2_第3批</td><td><span class="tag tag-blue">医疗</span></td><td>100</td><td><span class="tag tag-green">分发中</span></td><td><div class="progress-wrap"><div class="progress-bar"><div class="progress-bar-inner" style="width:72%"></div></div><span class="progress-text">72/100</span></div></td><td>2026-06-25</td></tr>
+        <tr><td>金融行业_2026Q2_第2批</td><td><span class="tag tag-orange">金融</span></td><td>80</td><td><span class="tag tag-green">分发中</span></td><td><div class="progress-wrap"><div class="progress-bar"><div class="progress-bar-inner" style="width:45%"></div></div><span class="progress-text">36/80</span></div></td><td>2026-06-20</td></tr>
+        <tr><td>教育行业_2026Q1_第1批</td><td><span class="tag tag-gray">教育</span></td><td>120</td><td><span class="tag tag-blue">已完成</span></td><td><div class="progress-wrap"><div class="progress-bar"><div class="progress-bar-inner" style="width:100%"></div></div><span class="progress-text">120/120</span></div></td><td>2026-05-10</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- PAGE: Datasets -->
+<div class="page" id="page-datasets">
+  <div class="page-header">
+    <div><div class="page-title">标注集管理</div><div class="page-desc">管理标注批次，分发给标注人员</div></div>
+    <button class="btn btn-primary" onclick="openModal('modal-create')">＋ 新建标注集</button>
+  </div>
+  <div class="table-container">
+    <div class="table-toolbar">
+      <div style="display:flex;gap:8px;align-items:center">
+        <input class="form-input" style="width:220px" placeholder="搜索批次名称..." oninput="filterTable(this.value)">
+        <select class="form-select" style="width:120px"><option value="">全部行业</option><option>医疗</option><option>金融</option><option>教育</option><option>汽车</option></select>
+        <select class="form-select" style="width:120px"><option value="">全部状态</option><option>未分发</option><option>分发中</option><option>已完成</option></select>
+      </div>
+    </div>
+    <table id="datasets-table">
+      <thead><tr><th>批次名称</th><th>行业</th><th>数据量</th><th>分发状态</th><th>标注进度</th><th>创建人</th><th>创建时间</th><th>操作</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><strong>医疗行业_2026Q2_第3批</strong></td>
+          <td><span class="tag tag-blue">医疗</span></td>
+          <td>100</td>
+          <td><span class="tag tag-green">分发中</span></td>
+          <td><div class="progress-wrap"><div class="progress-bar"><div class="progress-bar-inner" style="width:72%"></div></div><span class="progress-text">72/100 (72%)</span></div></td>
+          <td>dingbohao</td>
+          <td>2026-06-25</td>
+          <td><button class="btn btn-text btn-sm" onclick="switchPage('annotate')">标注</button><button class="btn btn-text btn-sm" onclick="switchPage('results')">查看结果</button><button class="btn btn-text btn-sm" onclick="openModal('modal-distribute')">查看分发</button></td>
+        </tr>
+        <tr>
+          <td><strong>金融行业_2026Q2_第2批</strong></td>
+          <td><span class="tag tag-orange">金融</span></td>
+          <td>80</td>
+          <td><span class="tag tag-green">分发中</span></td>
+          <td><div class="progress-wrap"><div class="progress-bar"><div class="progress-bar-inner" style="width:45%"></div></div><span class="progress-text">36/80 (45%)</span></div></td>
+          <td>dingbohao</td>
+          <td>2026-06-20</td>
+          <td><button class="btn btn-text btn-sm">标注</button><button class="btn btn-text btn-sm" onclick="switchPage('results')">查看结果</button><button class="btn btn-text btn-sm" onclick="openModal('modal-distribute')">查看分发</button></td>
+        </tr>
+        <tr>
+          <td><strong>教育行业_2026Q1_第1批</strong></td>
+          <td><span class="tag tag-gray">教育</span></td>
+          <td>120</td>
+          <td><span class="tag tag-blue">已完成</span></td>
+          <td><div class="progress-wrap"><div class="progress-bar"><div class="progress-bar-inner" style="width:100%"></div></div><span class="progress-text">120/120 (100%)</span></div></td>
+          <td>dingbohao</td>
+          <td>2026-05-10</td>
+          <td><button class="btn btn-text btn-sm" onclick="switchPage('results')">查看结果</button><button class="btn btn-text btn-sm" onclick="switchPage('report')">查看报告</button></td>
+        </tr>
+        <tr>
+          <td><strong>汽车行业_2026Q1_第2批</strong></td>
+          <td><span class="tag tag-gray">汽车</span></td>
+          <td>60</td>
+          <td><span class="tag tag-gray">未分发</span></td>
+          <td><div class="progress-wrap"><div class="progress-bar"><div class="progress-bar-inner" style="width:0%"></div></div><span class="progress-text">0/60</span></div></td>
+          <td>dingbohao</td>
+          <td>2026-06-28</td>
+          <td><button class="btn btn-primary btn-sm" onclick="openModal('modal-distribute')">分发</button></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+
+<!-- PAGE: Annotate -->
+<div class="page" id="page-annotate">
+  <div class="anno-header">
+    <div style="font-size:13px;color:var(--text2)">📋 医疗行业_2026Q2_第3批</div>
+    <div class="anno-nav">
+      <button class="btn btn-default btn-sm" onclick="annoNav(-1)">← 上一条</button>
+      <div class="anno-counter">第 <span id="anno-cur">3</span> / <span id="anno-total">25</span> 条</div>
+      <button class="btn btn-default btn-sm" onclick="annoNav(1)">下一条 →</button>
+    </div>
+    <div class="anno-progress-wrap">
+      <div class="progress-bar" style="flex:1"><div class="progress-bar-inner" id="anno-prog" style="width:48%"></div></div>
+      <span class="progress-text" id="anno-prog-text">12/25 完成</span>
+    </div>
+    <button class="btn btn-default btn-sm" onclick="switchPage('datasets')">← 返回列表</button>
+  </div>
+  <div class="anno-layout">
+    <!-- Left: Content -->
+    <div class="anno-content">
+      <div class="content-block">
+        <div class="content-block-title"><span class="dot"></span>用户搜索词（Query）</div>
+        <div class="content-text" id="disp-query">二手车置换补贴政策 2026</div>
+      </div>
+      <div class="content-block">
+        <div class="content-block-title"><span class="dot" style="background:#52c41a"></span>数字人口播内容（TTS）</div>
+        <div class="content-text" id="disp-tts">您好！如果您正在考虑二手车置换，现在是最佳时机！今年国家出台了二手车置换补贴新政，购买符合条件的新能源车最高可享受1万元补贴。我们诊所提供...不好意思，我是您的二手车置换顾问，您有想置换的车型吗？目前我们在售车辆有丰田凯美瑞、本田雅阁等热门车型，置换流程简单快捷，当天即可完成。</div>
+      </div>
+      <div class="content-block">
+        <div class="content-block-title"><span class="dot" style="background:#722ed1"></span>评论区互动内容（IM）</div>
+        <div class="content-text" id="disp-im">【置换补贴高达1万！】朋友们，国家补贴来啦～有没有想换车的？现在置换最划算！👏 \n有问题直接刷弹幕问我哦，我在这里！</div>
+      </div>
+      <div style="margin-bottom:12px">
+        <div class="collapsible-header" onclick="toggleCollapse('summary')">
+          <div style="display:flex;align-items:center;gap:8px"><span style="font-size:12px;color:var(--text3)">▌</span><span style="font-size:13px;font-weight:500">直播间 Summary</span></div>
+          <span class="arrow" id="arrow-summary">▶</span>
+        </div>
+        <div class="collapsible-content" id="collapse-summary">直播间主题：二手车置换政策解读及购车咨询服务。主播全程讲解2026年最新补贴政策，重点推介店内在售热门二手车及以旧换新服务流程，提供1对1咨询，当日成交享额外优惠。服务亮点：补贴申请代办、车辆质检报告、30天质保服务。</div>
+      </div>
+      <div>
+        <div class="collapsible-header" onclick="toggleCollapse('script')">
+          <div style="display:flex;align-items:center;gap:8px"><span style="font-size:12px;color:var(--text3)">▌</span><span style="font-size:13px;font-weight:500">直播脚本</span></div>
+          <span class="arrow" id="arrow-script">▶</span>
+        </div>
+        <div class="collapsible-content" id="collapse-script">【开场】大家好，我是小李，今天给大家聊聊最热门的二手车置换补贴话题！\n【正文】根据最新政策，2026年以旧换新补贴标准为：国六排放新能源车购置补贴3000-10000元，具体金额根据车型和排量确定。我们店目前库存丰富...\n【服务推荐】现在咨询，免费获得专业评估报告一份，还有置换手续费减免优惠，机会难得！刷弹幕告诉我你想了解哪款车！</div>
+      </div>
+    </div>
+    <!-- Right: Score -->
+    <div class="anno-score">
+      <div id="score-dims">
+        <!-- Dim 1 -->
+        <div class="dim-block">
+          <div class="dim-title"><span class="dim-num">1</span>Query-Content 相关性</div>
+          <div class="score-btns">
+            <div class="score-btn" data-dim="1" data-val="1" onclick="selectScore(1,1)">1分</div>
+            <div class="score-btn" data-dim="1" data-val="2" onclick="selectScore(1,2)">2分</div>
+            <div class="score-btn selected" data-dim="1" data-val="3" onclick="selectScore(1,3)">3分</div>
+            <div class="score-btn" data-dim="1" data-val="4" onclick="selectScore(1,4)">4分</div>
+          </div>
+          <div class="score-hint">3分：内容与query有较好关联，主要信息匹配，但存在少量偏差或冗余</div>
+          <textarea class="reason-input" placeholder="打分原因（可选）..." id="reason-1">内容涉及二手车置换和补贴政策，与query基本匹配，但TTS中有部分与医疗相关的混乱文本</textarea>
+        </div>
+        <!-- Dim 2 -->
+        <div class="dim-block">
+          <div class="dim-title"><span class="dim-num">2</span>Content-直播间内容一致性</div>
+          <div class="score-btns">
+            <div class="score-btn" data-dim="2" data-val="1" onclick="selectScore(2,1)">1分</div>
+            <div class="score-btn" data-dim="2" data-val="2" onclick="selectScore(2,2)">2分</div>
+            <div class="score-btn selected" data-dim="2" data-val="3" onclick="selectScore(2,3)">3分</div>
+            <div class="score-btn" data-dim="2" data-val="4" onclick="selectScore(2,4)">4分</div>
+          </div>
+          <div class="score-hint">3分：内容与直播间主题基本一致，核心信息吻合</div>
+          <textarea class="reason-input" placeholder="打分原因（可选）..." id="reason-2"></textarea>
+        </div>
+        <!-- Dim 3 -->
+        <div class="dim-block">
+          <div class="dim-title"><span class="dim-num">3</span>服务推荐一致性</div>
+          <div class="score-btns">
+            <div class="score-btn" data-dim="3" data-val="1" onclick="selectScore(3,1)">1分</div>
+            <div class="score-btn" data-dim="3" data-val="2" onclick="selectScore(3,2)">2分</div>
+            <div class="score-btn" data-dim="3" data-val="3" onclick="selectScore(3,3)">3分</div>
+            <div class="score-btn selected" data-dim="3" data-val="4" onclick="selectScore(3,4)">4分</div>
+          </div>
+          <div class="score-hint">4分：服务推荐内容与直播间推荐高度一致，无遗漏或偏差</div>
+          <textarea class="reason-input" placeholder="打分原因（可选）..." id="reason-3">TTS中提到置换手续费减免和评估报告，与直播脚本服务推荐高度吻合</textarea>
+        </div>
+        <!-- Dim 4 -->
+        <div class="dim-block">
+          <div class="dim-title"><span class="dim-num">4</span>语言指标</div>
+          <div class="score-btns">
+            <div class="score-btn" data-dim="4" data-val="1" onclick="selectScore(4,1)">1分</div>
+            <div class="score-btn" data-dim="4" data-val="2" onclick="selectScore(4,2)">2分</div>
+            <div class="score-btn selected" data-dim="4" data-val="3" onclick="selectScore(4,3)">3分</div>
+            <div class="score-btn" data-dim="4" data-val="4" onclick="selectScore(4,4)">4分</div>
+          </div>
+          <div class="score-hint">3分：语言基本简明，有互动引导，偶有语法瑕疵</div>
+          <textarea class="reason-input" placeholder="打分原因（可选）..." id="reason-4"></textarea>
+        </div>
+      </div>
+      <div class="uncertain-block">
+        <label class="uncertain-label">
+          <input type="checkbox" id="uncertain-check" onchange="toggleUncertain()">
+          ⚠️ 标记为"不确定"（先标注一个，但我不确定）
+        </label>
+        <div id="uncertain-reason-wrap" style="display:none;margin-top:10px">
+          <textarea class="reason-input" placeholder="不确定原因（可选）..." style="height:44px"></textarea>
+        </div>
+      </div>
+      <div class="anno-actions">
+        <button class="btn btn-default" onclick="saveAnno(false)">暂存</button>
+        <button class="btn btn-primary" onclick="saveAnno(true)">保存并下一条 →</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- PAGE: Results -->
+<div class="page" id="page-results">
+  <div class="page-header">
+    <div><div class="page-title">结果汇总</div><div class="page-desc">查看所有标注结果，支持多维度筛选</div></div>
+    <button class="btn btn-default">⬇ 导出 Excel</button>
+  </div>
+  <div class="filter-bar">
+    <div class="filter-item"><label>行业</label><select><option>全部</option><option>医疗</option><option>金融</option><option>教育</option><option>汽车</option></select></div>
+    <div class="filter-item"><label>批次</label><select><option>全部</option><option>医疗行业_2026Q2_第3批</option><option>金融行业_2026Q2_第2批</option><option>教育行业_2026Q1_第1批</option></select></div>
+    <div class="filter-item"><label>标注员</label><select><option>全部</option><option>张三</option><option>李四</option><option>王五</option><option>dingbohao</option></select></div>
+    <div class="filter-item"><label>不确定标记</label><select><option>全部</option><option>仅不确定</option></select></div>
+    <div class="filter-item"><label>综合评分</label><input type="number" min="1" max="4" placeholder="≥" style="width:64px"><span style="margin:0 4px;line-height:32px;color:#aaa">-</span><input type="number" min="1" max="4" placeholder="≤" style="width:64px"></div>
+    <div style="display:flex;gap:8px;align-items:flex-end"><button class="btn btn-primary btn-sm">查询</button><button class="btn btn-default btn-sm">重置</button></div>
+  </div>
+  <div class="table-container">
+    <table>
+      <thead>
+        <tr>
+          <th>批次/行业</th>
+          <th>Query</th>
+          <th>TTS内容（截断）</th>
+          <th>维度1</th><th>维度2</th><th>维度3</th><th>维度4</th>
+          <th>综合</th>
+          <th>标注员</th>
+          <th>标记</th>
+          <th>操作</th>
+        </tr>
+      </thead>
+      <tbody id="results-tbody">
+        <tr>
+          <td><span class="tag tag-blue">医疗</span></td>
+          <td>二手车置换补贴政策</td>
+          <td style="max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">您好！如果您正在考虑...</td>
+          <td><span class="score-cell sc3">3</span></td><td><span class="score-cell sc3">3</span></td><td><span class="score-cell sc4">4</span></td><td><span class="score-cell sc3">3</span></td>
+          <td><strong>3.25</strong></td>
+          <td>张三</td>
+          <td></td>
+          <td><button class="btn btn-text btn-sm" onclick="toggleDetail('detail-1')">详情</button></td>
+        </tr>
+        <tr id="detail-1" style="display:none">
+          <td colspan="11" style="padding:0 16px 12px">
+            <div class="detail-panel open">
+              <div class="detail-row"><span class="detail-label">TTS全文：</span><span class="detail-val">您好！如果您正在考虑二手车置换，现在是最佳时机！今年国家出台了二手车置换补贴新政，购买符合条件的新能源车最高可享受1万元补贴。</span></div>
+              <div class="detail-row"><span class="detail-label">IM全文：</span><span class="detail-val">【置换补贴高达1万！】朋友们，国家补贴来啦～有没有想换车的？现在置换最划算！👏</span></div>
+              <div class="detail-row"><span class="detail-label">维度1原因：</span><span class="detail-val">内容涉及二手车置换和补贴政策，与query基本匹配，但TTS中有部分与医疗相关的混乱文本</span></div>
+              <div class="detail-row"><span class="detail-label">维度3原因：</span><span class="detail-val">TTS中提到置换手续费减免和评估报告，与直播脚本服务推荐高度吻合</span></div>
+              <div style="margin-top:8px;display:flex;gap:8px"><button class="btn btn-sm" style="background:#f6ffed;border-color:#b7eb8f;color:#389e0d">✓ 标为正例</button><button class="btn btn-sm" style="background:#fff2f0;border-color:#ffa39e;color:#cf1322">✗ 标为负例</button></div>
+            </div>
+          </td>
+        </tr>
+        <tr>
+          <td><span class="tag tag-orange">金融</span></td>
+          <td>信用卡年费减免申请</td>
+          <td style="max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">尊敬的用户，关于信用卡...</td>
+          <td><span class="score-cell sc4">4</span></td><td><span class="score-cell sc4">4</span></td><td><span class="score-cell sc3">3</span></td><td><span class="score-cell sc4">4</span></td>
+          <td><strong>3.75</strong></td>
+          <td>李四</td>
+          <td></td>
+          <td><button class="btn btn-text btn-sm" onclick="toggleDetail('detail-2')">详情</button></td>
+        </tr>
+        <tr id="detail-2" style="display:none">
+          <td colspan="11" style="padding:0 16px 12px">
+            <div class="detail-panel open">
+              <div class="detail-row"><span class="detail-label">TTS全文：</span><span class="detail-val">尊敬的用户，关于您咨询的信用卡年费减免问题，我们提供全年免年费服务，只需每年消费满6次即可免除年费。现在开通还有积分翻倍活动！</span></div>
+              <div class="detail-row"><span class="detail-label">打分小结：</span><span class="detail-val">内容与query高度相关，与直播间内容一致，语言简明互动性强</span></div>
+            </div>
+          </td>
+        </tr>
+        <tr>
+          <td><span class="tag tag-gray">教育</span></td>
+          <td>少儿英语培训班推荐</td>
+          <td style="max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">各位家长朋友，孩子的英语...</td>
+          <td><span class="score-cell sc4">4</span></td><td><span class="score-cell sc3">3</span></td><td><span class="score-cell sc4">4</span></td><td><span class="score-cell sc3">3</span></td>
+          <td><strong>3.50</strong></td>
+          <td>王五</td>
+          <td><span class="badge-uncertain">⚠ 不确定</span></td>
+          <td><button class="btn btn-text btn-sm" onclick="toggleDetail('detail-3')">详情</button></td>
+        </tr>
+        <tr id="detail-3" style="display:none">
+          <td colspan="11" style="padding:0 16px 12px">
+            <div class="detail-panel open">
+              <div class="detail-row"><span class="detail-label">不确定原因：</span><span class="detail-val">直播间summary较简略，无法确认服务推荐是否完全一致</span></div>
+            </div>
+          </td>
+        </tr>
+        <tr>
+          <td><span class="tag tag-blue">医疗</span></td>
+          <td>中医养生调理推荐</td>
+          <td style="max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">传统中医养生，让您...</td>
+          <td><span class="score-cell sc2">2</span></td><td><span class="score-cell sc3">3</span></td><td><span class="score-cell sc2">2</span></td><td><span class="score-cell sc3">3</span></td>
+          <td><strong>2.50</strong></td>
+          <td>张三</td>
+          <td></td>
+          <td><button class="btn btn-text btn-sm" onclick="toggleDetail('detail-4')">详情</button></td>
+        </tr>
+        <tr id="detail-4" style="display:none">
+          <td colspan="11" style="padding:0 16px 12px">
+            <div class="detail-panel open">
+              <div class="detail-row"><span class="detail-label">维度1原因：</span><span class="detail-val">TTS内容偏向营销宣传，缺少对用户具体养生需求的回应</span></div>
+              <div class="detail-row"><span class="detail-label">维度3原因：</span><span class="detail-val">服务推荐话术与直播脚本中的项目推介存在部分不一致</span></div>
+            </div>
+          </td>
+        </tr>
+        <tr>
+          <td><span class="tag tag-orange">金融</span></td>
+          <td>理财产品年化收益对比</td>
+          <td style="max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">为您精心挑选高收益...</td>
+          <td><span class="score-cell sc3">3</span></td><td><span class="score-cell sc4">4</span></td><td><span class="score-cell sc3">3</span></td><td><span class="score-cell sc4">4</span></td>
+          <td><strong>3.50</strong></td>
+          <td>李四</td>
+          <td></td>
+          <td><button class="btn btn-text btn-sm" onclick="toggleDetail('detail-5')">详情</button></td>
+        </tr>
+        <tr id="detail-5" style="display:none">
+          <td colspan="11">
+            <div class="detail-panel open" style="margin:0 16px 12px">
+              <div class="detail-row"><span class="detail-label">TTS全文：</span><span class="detail-val">为您精心挑选高收益低风险理财产品，当前热门产品年化收益4.2%-6.8%，支持T+1灵活赎回。</span></div>
+            </div>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+
+<!-- PAGE: Report -->
+<div class="page" id="page-report">
+  <div class="page-header">
+    <div><div class="page-title">分析报告</div><div class="page-desc">标注结果统计与维度分布分析</div></div>
+    <div style="display:flex;gap:8px">
+      <button class="btn btn-default">⬇ 导出PDF</button>
+      <button class="btn btn-primary" onclick="switchPage('chatbot')">💬 对话式分析</button>
+    </div>
+  </div>
+  <div style="display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap">
+    <select class="form-select" style="width:200px"><option>全部批次</option><option>医疗行业_2026Q2_第3批</option><option>金融行业_2026Q2_第2批</option><option>教育行业_2026Q1_第1批</option></select>
+    <select class="form-select" style="width:140px"><option>全部行业</option><option>医疗</option><option>金融</option><option>教育</option></select>
+  </div>
+  <div class="overview-cards">
+    <div class="ov-card"><div class="ov-label">总标注条数</div><div class="ov-val">980</div></div>
+    <div class="ov-card"><div class="ov-label">整体完成率</div><div class="ov-val green">81.7%</div></div>
+    <div class="ov-card"><div class="ov-label">综合均分</div><div class="ov-val blue">3.24</div></div>
+    <div class="ov-card"><div class="ov-label">不确定标记数</div><div class="ov-val" style="color:var(--warning)">45</div></div>
+    <div class="ov-card"><div class="ov-label">低分条目（≤2分）</div><div class="ov-val" style="color:var(--error)">87</div></div>
+    <div class="ov-card"><div class="ov-label">标注人员数</div><div class="ov-val">8</div></div>
+  </div>
+  <div class="chart-grid">
+    <div class="chart-card">
+      <div class="chart-title">维度1：Query-Content 相关性</div>
+      <div class="chart-subtitle">均值 3.12 · 标准差 0.68</div>
+      <div class="bar-chart">
+        <div class="bar-group"><div class="bar" style="height:18px;background:#ffa39e" data-val="18条 (1.8%)"></div><div class="bar-label">1分</div></div>
+        <div class="bar-group"><div class="bar" style="height:58px;background:#ffd591" data-val="148条 (15.1%)"></div><div class="bar-label">2分</div></div>
+        <div class="bar-group"><div class="bar" style="height:110px;background:#95de64" data-val="462条 (47.1%)"></div><div class="bar-label">3分</div></div>
+        <div class="bar-group"><div class="bar" style="height:88px;background:#69b1ff" data-val="352条 (35.9%)"></div><div class="bar-label">4分</div></div>
+      </div>
+      <div class="chart-stats"><span class="chart-stat">1分 <strong>1.8%</strong></span><span class="chart-stat">2分 <strong>15.1%</strong></span><span class="chart-stat">3分 <strong>47.1%</strong></span><span class="chart-stat">4分 <strong>35.9%</strong></span></div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">维度2：Content-直播间内容一致性</div>
+      <div class="chart-subtitle">均值 3.31 · 标准差 0.61</div>
+      <div class="bar-chart">
+        <div class="bar-group"><div class="bar" style="height:10px;background:#ffa39e" data-val="10条 (1%)"></div><div class="bar-label">1分</div></div>
+        <div class="bar-group"><div class="bar" style="height:38px;background:#ffd591" data-val="98条 (10%)"></div><div class="bar-label">2分</div></div>
+        <div class="bar-group"><div class="bar" style="height:96px;background:#95de64" data-val="398条 (40.6%)"></div><div class="bar-label">3分</div></div>
+        <div class="bar-group"><div class="bar" style="height:116px;background:#69b1ff" data-val="474条 (48.4%)"></div><div class="bar-label">4分</div></div>
+      </div>
+      <div class="chart-stats"><span class="chart-stat">1分 <strong>1.0%</strong></span><span class="chart-stat">2分 <strong>10.0%</strong></span><span class="chart-stat">3分 <strong>40.6%</strong></span><span class="chart-stat">4分 <strong>48.4%</strong></span></div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">维度3：Content服务推荐一致性</div>
+      <div class="chart-subtitle">均值 2.87 · 标准差 0.82</div>
+      <div class="bar-chart">
+        <div class="bar-group"><div class="bar" style="height:32px;background:#ffa39e" data-val="42条 (4.3%)"></div><div class="bar-label">1分</div></div>
+        <div class="bar-group"><div class="bar" style="height:82px;background:#ffd591" data-val="216条 (22%)"></div><div class="bar-label">2分</div></div>
+        <div class="bar-group"><div class="bar" style="height:100px;background:#95de64" data-val="426条 (43.5%)"></div><div class="bar-label">3分</div></div>
+        <div class="bar-group"><div class="bar" style="height:68px;background:#69b1ff" data-val="296条 (30.2%)"></div><div class="bar-label">4分</div></div>
+      </div>
+      <div class="chart-stats"><span class="chart-stat">1分 <strong>4.3%</strong></span><span class="chart-stat">2分 <strong>22.0%</strong></span><span class="chart-stat">3分 <strong>43.5%</strong></span><span class="chart-stat">4分 <strong>30.2%</strong></span></div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">维度4：语言指标</div>
+      <div class="chart-subtitle">均值 3.18 · 标准差 0.73</div>
+      <div class="bar-chart">
+        <div class="bar-group"><div class="bar" style="height:14px;background:#ffa39e" data-val="14条 (1.4%)"></div><div class="bar-label">1分</div></div>
+        <div class="bar-group"><div class="bar" style="height:60px;background:#ffd591" data-val="156条 (15.9%)"></div><div class="bar-label">2分</div></div>
+        <div class="bar-group"><div class="bar" style="height:108px;background:#95de64" data-val="452条 (46.1%)"></div><div class="bar-label">3分</div></div>
+        <div class="bar-group"><div class="bar" style="height:90px;background:#69b1ff" data-val="358条 (36.5%)"></div><div class="bar-label">4分</div></div>
+      </div>
+      <div class="chart-stats"><span class="chart-stat">1分 <strong>1.4%</strong></span><span class="chart-stat">2分 <strong>15.9%</strong></span><span class="chart-stat">3分 <strong>46.1%</strong></span><span class="chart-stat">4分 <strong>36.5%</strong></span></div>
+    </div>
+  </div>
+  <div class="table-container">
+    <div class="table-toolbar"><span style="font-weight:600">标注员效率统计</span></div>
+    <table>
+      <thead><tr><th>标注员</th><th>完成数</th><th>不确定率</th><th>维度1均分</th><th>维度2均分</th><th>维度3均分</th><th>维度4均分</th><th>综合均分</th></tr></thead>
+      <tbody>
+        <tr><td>张三</td><td>245</td><td>3.2%</td><td>3.1</td><td>3.3</td><td>2.8</td><td>3.2</td><td>3.1</td></tr>
+        <tr><td>李四</td><td>198</td><td>5.1%</td><td>3.2</td><td>3.4</td><td>3.0</td><td>3.1</td><td>3.2</td></tr>
+        <tr><td>王五</td><td>212</td><td>6.6%</td><td>3.0</td><td>3.2</td><td>2.9</td><td>3.3</td><td>3.1</td></tr>
+        <tr><td>dingbohao</td><td>325</td><td>2.8%</td><td>3.2</td><td>3.4</td><td>2.9</td><td>3.2</td><td>3.2</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+
+<!-- PAGE: Chatbot -->
+<div class="page" id="page-chatbot">
+  <div class="page-header">
+    <div><div class="page-title">对话式分析</div><div class="page-desc">与 AI 对话，洞察标注数据中的规律</div></div>
+  </div>
+  <div class="chat-container">
+    <div class="chat-header">
+      <div class="chat-scope">当前数据范围：<strong>全部批次 · 980 条已标注数据</strong> <button class="btn btn-text btn-sm">修改范围</button></div>
+    </div>
+    <div class="chat-messages" id="chat-messages">
+      <div class="msg ai">
+        <div class="msg-bubble">
+          你好！我已加载当前数据集（共 980 条标注记录）的统计信息。你可以问我任何关于标注结果的问题，例如：<br><br>
+          • 哪个维度得分最低，可能原因是什么？<br>
+          • 不确定标记较多的条目有什么共同特征？<br>
+          • 帮我分析维度3和维度1的得分差异<br>
+          • 基于标注结果，给出 Prompt 优化建议
+        </div>
+        <div class="msg-time">AI 助手</div>
+      </div>
+    </div>
+    <div class="chat-quick">
+      <div class="quick-btn" onclick="sendQuick('哪个维度得分最低，可能原因是什么？')">哪个维度得分最低？</div>
+      <div class="quick-btn" onclick="sendQuick('不确定标记较多的条目有什么共同特征？')">不确定条目特征分析</div>
+      <div class="quick-btn" onclick="sendQuick('基于当前标注结果，给出Prompt优化方向建议')">Prompt 优化建议</div>
+    </div>
+    <div class="chat-input-area">
+      <textarea class="chat-input" id="chat-input" placeholder="输入你的问题..." rows="1" onkeydown="chatEnter(event)"></textarea>
+      <button class="btn btn-primary" onclick="sendChat()">发送</button>
+    </div>
+  </div>
+</div>
+
+<!-- PAGE: Criteria -->
+<div class="page" id="page-criteria">
+  <div class="page-header">
+    <div><div class="page-title">评分标准管理</div><div class="page-desc">编辑各维度打分规则，发布后推送给标注员</div></div>
+  </div>
+  <div class="criteria-layout">
+    <div class="dim-list">
+      <div class="dim-tab active" onclick="switchDim(0)">维度1：Query-Content 相关性</div>
+      <div class="dim-tab" onclick="switchDim(1)">维度2：Content-直播间一致性</div>
+      <div class="dim-tab" onclick="switchDim(2)">维度3：服务推荐一致性</div>
+      <div class="dim-tab" onclick="switchDim(3)">维度4：语言指标</div>
+    </div>
+    <div class="criteria-edit">
+      <div class="criteria-header">
+        <div>
+          <h3 id="criteria-title">维度1：Query-Content 相关性</h3>
+          <div style="font-size:13px;color:var(--text3);margin-top:4px" id="criteria-ver">当前版本：v2.1 · 2026-06-01 发布</div>
+        </div>
+        <div style="display:flex;gap:8px">
+          <button class="btn btn-default">查看历史版本</button>
+          <button class="btn btn-primary" onclick="publishCriteria()">📢 发布并推送</button>
+        </div>
+      </div>
+      <div class="form-item">
+        <label class="form-label">维度说明</label>
+        <textarea class="criteria-textarea" style="height:56px" id="criteria-desc">评估生成内容（TTS和IM）与用户搜索词（query）的语义相关程度，重点关注内容是否有效回应了用户的搜索意图，避免跑题或无关内容。</textarea>
+      </div>
+      <div class="score-criteria">
+        <div class="score-criteria-header"><span class="score-badge s1">1</span><span style="font-size:13px;font-weight:600;color:#cf1322">1分（极差）</span></div>
+        <textarea class="criteria-textarea">内容与query完全无关，或存在严重错误信息，无法回应用户搜索意图；内容属于其他行业或完全偏离主题。</textarea>
+      </div>
+      <div class="score-criteria">
+        <div class="score-criteria-header"><span class="score-badge s2">2</span><span style="font-size:13px;font-weight:600;color:#d46b08">2分（较差）</span></div>
+        <textarea class="criteria-textarea">内容与query有一定关联，但相关性较弱，主要信息点有明显遗漏或偏差，用户意图得到部分回应但不充分。</textarea>
+      </div>
+      <div class="score-criteria">
+        <div class="score-criteria-header"><span class="score-badge s3">3</span><span style="font-size:13px;font-weight:600;color:#389e0d">3分（良好）</span></div>
+        <textarea class="criteria-textarea">内容与query关联度较高，主要信息匹配，能有效回应用户搜索意图，存在少量偏差或冗余但不影响整体相关性。</textarea>
+      </div>
+      <div class="score-criteria">
+        <div class="score-criteria-header"><span class="score-badge s4">4</span><span style="font-size:13px;font-weight:600;color:#0958d9">4分（优秀）</span></div>
+        <textarea class="criteria-textarea">内容与query高度相关，精准回应用户搜索意图，信息准确完整，无偏差和无关内容，能有效引导用户进行下一步互动。</textarea>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- PAGE: Prompt -->
+<div class="page" id="page-prompt">
+  <div class="page-header">
+    <div><div class="page-title">Prompt 管理</div><div class="page-desc">管理各行业 TTS/IM 生成 Prompt，支持版本对比和模拟生成</div></div>
+    <button class="btn btn-primary" onclick="openModal('modal-simulate')">🔮 模拟生成</button>
+  </div>
+  <div class="table-container" style="margin-bottom:16px">
+    <div class="table-toolbar"><span style="font-weight:600">行业 Prompt 列表</span></div>
+    <table>
+      <thead><tr><th>行业</th><th>当前版本</th><th>最近更新</th><th>TTS Prompt 预览</th><th>操作</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><span class="tag tag-blue">医疗</span></td>
+          <td><span class="tag tag-green">v2.3</span></td>
+          <td>2026-06-28 dingbohao</td>
+          <td style="max-width:240px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text3);font-family:monospace;font-size:12px">你是一个{industry}行业直播间的数字人助手...</td>
+          <td><button class="btn btn-text btn-sm" onclick="openModal('modal-prompt-edit')">编辑</button><button class="btn btn-text btn-sm" onclick="openModal('modal-simulate')">模拟</button></td>
+        </tr>
+        <tr>
+          <td><span class="tag tag-orange">金融</span></td>
+          <td><span class="tag tag-green">v1.8</span></td>
+          <td>2026-06-15 dingbohao</td>
+          <td style="max-width:240px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text3);font-family:monospace;font-size:12px">你是{industry}行业直播间的AI助手，根据用户搜索词...</td>
+          <td><button class="btn btn-text btn-sm" onclick="openModal('modal-prompt-edit')">编辑</button><button class="btn btn-text btn-sm" onclick="openModal('modal-simulate')">模拟</button></td>
+        </tr>
+        <tr>
+          <td><span class="tag tag-gray">教育</span></td>
+          <td><span class="tag tag-gray">v1.2</span></td>
+          <td>2026-04-22 dingbohao</td>
+          <td style="max-width:240px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text3);font-family:monospace;font-size:12px">作为{industry}教育机构直播助手，针对家长搜索...</td>
+          <td><button class="btn btn-text btn-sm" onclick="openModal('modal-prompt-edit')">编辑</button><button class="btn btn-text btn-sm" onclick="openModal('modal-simulate')">模拟</button></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+
+</div>
+
+<!-- PAGE: Permission -->
+<div class="page" id="page-permission">
+  <div class="page-header">
+    <div><div class="page-title">权限管理</div><div class="page-desc">配置平台成员与各功能模块的访问权限</div></div>
+    <button class="btn btn-primary" onclick="openModal('modal-add-member')">＋ 添加成员</button>
+  </div>
+  <div class="perm-layout">
+    <!-- Left Tabs -->
+    <div class="perm-tabs">
+      <div class="perm-tab active" onclick="switchPermTab('members')"><span>👥</span>人员管理</div>
+      <div class="perm-tab" onclick="switchPermTab('roles')"><span>🎭</span>角色权限</div>
+      <div class="perm-tab" onclick="switchPermTab('matrix')"><span>🔧</span>功能权限配置</div>
+    </div>
+    <!-- Right Content -->
+    <div class="perm-content">
+
+      <!-- 人员管理 -->
+      <div class="perm-section active" id="perm-members">
+        <div class="section-title">成员列表</div>
+        <div class="member-search">
+          <input class="form-input" style="width:220px" placeholder="搜索成员姓名/账号...">
+          <select class="form-select" style="width:140px"><option>全部角色</option><option>超级管理员</option><option>管理员</option><option>标注员</option><option>分析员</option></select>
+          <select class="form-select" style="width:120px"><option>全部状态</option><option>启用</option><option>停用</option></select>
+        </div>
+        <div class="table-container">
+          <table>
+            <thead><tr><th>成员</th><th>账号</th><th>角色</th><th>可标注行业</th><th>状态</th><th>加入时间</th><th>操作</th></tr></thead>
+            <tbody>
+              <tr>
+                <td><div style="display:flex;align-items:center;gap:8px"><div class="avatar" style="background:#722ed1">丁</div><span style="font-weight:500">dingbohao</span></div></td>
+                <td>dingbohao</td>
+                <td><select class="role-select-cell" onchange="onRoleChange(this)"><option selected>超级管理员</option><option>管理员</option><option>标注员</option><option>分析员</option></select></td>
+                <td><span class="tag tag-blue">全部</span></td>
+                <td><div class="switch-wrap"><div class="switch on" onclick="toggleSwitch(this)"></div><span style="font-size:12px;color:var(--success)">启用</span></div></td>
+                <td>2026-01-01</td>
+                <td><button class="btn btn-text btn-sm">编辑</button></td>
+              </tr>
+              <tr>
+                <td><div style="display:flex;align-items:center;gap:8px"><div class="avatar" style="background:#52c41a">张</div><span style="font-weight:500">张三</span></div></td>
+                <td>zhangsan</td>
+                <td><select class="role-select-cell" onchange="onRoleChange(this)"><option>超级管理员</option><option>管理员</option><option selected>标注员</option><option>分析员</option></select></td>
+                <td><span class="tag tag-blue">医疗</span> <span class="tag tag-orange">金融</span></td>
+                <td><div class="switch-wrap"><div class="switch on" onclick="toggleSwitch(this)"></div><span style="font-size:12px;color:var(--success)">启用</span></div></td>
+                <td>2026-03-10</td>
+                <td><button class="btn btn-text btn-sm">编辑</button><button class="btn btn-text btn-sm" style="color:var(--error)">移除</button></td>
+              </tr>
+              <tr>
+                <td><div style="display:flex;align-items:center;gap:8px"><div class="avatar" style="background:#faad14">李</div><span style="font-weight:500">李四</span></div></td>
+                <td>lisi</td>
+                <td><select class="role-select-cell" onchange="onRoleChange(this)"><option>超级管理员</option><option>管理员</option><option selected>标注员</option><option>分析员</option></select></td>
+                <td><span class="tag tag-orange">金融</span> <span class="tag tag-gray">教育</span></td>
+                <td><div class="switch-wrap"><div class="switch on" onclick="toggleSwitch(this)"></div><span style="font-size:12px;color:var(--success)">启用</span></div></td>
+                <td>2026-03-15</td>
+                <td><button class="btn btn-text btn-sm">编辑</button><button class="btn btn-text btn-sm" style="color:var(--error)">移除</button></td>
+              </tr>
+              <tr>
+                <td><div style="display:flex;align-items:center;gap:8px"><div class="avatar" style="background:#1677ff">王</div><span style="font-weight:500">王五</span></div></td>
+                <td>wangwu</td>
+                <td><select class="role-select-cell" onchange="onRoleChange(this)"><option>超级管理员</option><option>管理员</option><option selected>标注员</option><option>分析员</option></select></td>
+                <td><span class="tag tag-blue">医疗</span> <span class="tag tag-gray">教育</span></td>
+                <td><div class="switch-wrap"><div class="switch on" onclick="toggleSwitch(this)"></div><span style="font-size:12px;color:var(--success)">启用</span></div></td>
+                <td>2026-04-02</td>
+                <td><button class="btn btn-text btn-sm">编辑</button><button class="btn btn-text btn-sm" style="color:var(--error)">移除</button></td>
+              </tr>
+              <tr>
+                <td><div style="display:flex;align-items:center;gap:8px"><div class="avatar" style="background:#eb2f96">赵</div><span style="font-weight:500">赵六</span></div></td>
+                <td>zhaoliu</td>
+                <td><select class="role-select-cell" onchange="onRoleChange(this)"><option>超级管理员</option><option>管理员</option><option>标注员</option><option selected>分析员</option></select></td>
+                <td><span class="tag tag-blue">全部（只读）</span></td>
+                <td><div class="switch-wrap"><div class="switch on" onclick="toggleSwitch(this)"></div><span style="font-size:12px;color:var(--success)">启用</span></div></td>
+                <td>2026-05-20</td>
+                <td><button class="btn btn-text btn-sm">编辑</button><button class="btn btn-text btn-sm" style="color:var(--error)">移除</button></td>
+              </tr>
+              <tr>
+                <td><div style="display:flex;align-items:center;gap:8px"><div class="avatar" style="background:#bfbfbf">陈</div><span style="font-weight:500">陈七</span></div></td>
+                <td>chenqi</td>
+                <td><select class="role-select-cell" onchange="onRoleChange(this)"><option>超级管理员</option><option>管理员</option><option selected>标注员</option><option>分析员</option></select></td>
+                <td><span class="tag tag-gray">汽车</span></td>
+                <td><div class="switch-wrap"><div class="switch" onclick="toggleSwitch(this)"></div><span style="font-size:12px;color:var(--text3)">停用</span></div></td>
+                <td>2026-06-01</td>
+                <td><button class="btn btn-text btn-sm">编辑</button><button class="btn btn-text btn-sm" style="color:var(--error)">移除</button></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- 角色权限 -->
+      <div class="perm-section" id="perm-roles">
+        <div class="section-title">角色定义</div>
+        <div class="role-cards">
+          <div class="role-card selected">
+            <div class="role-card-header">
+              <div class="role-name"><span>👑</span>超级管理员</div>
+              <span class="role-badge" style="background:#fff7e6;color:#d46b08">1人</span>
+            </div>
+            <div class="role-desc">平台最高权限，可执行所有操作，包括权限管理、成员管理、数据删除等敏感操作。</div>
+            <div class="role-perms">
+              <span class="perm-tag">管理成员</span><span class="perm-tag">分发任务</span><span class="perm-tag">参与标注</span>
+              <span class="perm-tag">查看报告</span><span class="perm-tag">管理Prompt</span><span class="perm-tag">管理评分标准</span>
+              <span class="perm-tag">导出数据</span><span class="perm-tag">删除数据</span>
+            </div>
+          </div>
+          <div class="role-card">
+            <div class="role-card-header">
+              <div class="role-name"><span>🛠️</span>管理员</div>
+              <span class="role-badge" style="background:#e6f4ff;color:#1677ff">2人</span>
+            </div>
+            <div class="role-desc">负责标注集管理、任务分发、评分标准维护，可查看全部分析报告，不可管理成员权限。</div>
+            <div class="role-perms">
+              <span class="perm-tag">分发任务</span><span class="perm-tag">参与标注</span>
+              <span class="perm-tag">查看报告</span><span class="perm-tag">管理Prompt</span><span class="perm-tag">管理评分标准</span>
+              <span class="perm-tag">导出数据</span>
+            </div>
+          </div>
+          <div class="role-card">
+            <div class="role-card-header">
+              <div class="role-name"><span>✏️</span>标注员</div>
+              <span class="role-badge" style="background:#f6ffed;color:#389e0d">4人</span>
+            </div>
+            <div class="role-desc">只能查看和完成分配给自己的标注任务，不可查看其他人的标注数据和分析报告。</div>
+            <div class="role-perms">
+              <span class="perm-tag">参与标注（仅自己任务）</span>
+              <span class="perm-tag">查看自己的完成情况</span>
+            </div>
+          </div>
+          <div class="role-card">
+            <div class="role-card-header">
+              <div class="role-name"><span>📊</span>分析员</div>
+              <span class="role-badge" style="background:#fff0f6;color:#c41d7f">1人</span>
+            </div>
+            <div class="role-desc">只读权限，可查看全部标注结果、分析报告，使用对话式分析功能，不可执行写操作。</div>
+            <div class="role-perms">
+              <span class="perm-tag">查看报告（只读）</span>
+              <span class="perm-tag">对话式分析</span>
+              <span class="perm-tag">导出数据</span>
+            </div>
+          </div>
+        </div>
+        <div style="background:#fffbe6;border:1px solid #ffe58f;border-radius:8px;padding:14px 16px;font-size:13px;color:#8b5e00">
+          <strong>⚠️ 注意：</strong>标注员的可操作行业范围由管理员单独配置（见"人员管理"中的"可标注行业"），即使同为标注员，医疗标注员不能看到金融批次的标注数据。
+        </div>
+      </div>
+
+      <!-- 功能权限配置 -->
+      <div class="perm-section" id="perm-matrix">
+        <div class="section-title">功能权限矩阵</div>
+        <div style="font-size:12px;color:var(--text3);margin-bottom:14px">勾选表示该角色拥有对应功能权限，取消勾选立即生效。</div>
+        <table class="perm-matrix">
+          <thead>
+            <tr>
+              <th style="width:220px">功能模块</th>
+              <th style="text-align:center">超级管理员</th>
+              <th style="text-align:center">管理员</th>
+              <th style="text-align:center">标注员</th>
+              <th style="text-align:center">分析员</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td colspan="5" class="perm-group-header">📋 标注集管理</td></tr>
+            <tr><td>上传/创建标注集</td><td style="text-align:center"><input type="checkbox" class="perm-check" checked disabled></td><td style="text-align:center"><input type="checkbox" class="perm-check" checked></td><td style="text-align:center"><input type="checkbox" class="perm-check"></td><td style="text-align:center"><input type="checkbox" class="perm-check"></td></tr>
+            <tr><td>分发标注任务</td><td style="text-align:center"><input type="checkbox" class="perm-check" checked disabled></td><td style="text-align:center"><input type="checkbox" class="perm-check" checked></td><td style="text-align:center"><input type="checkbox" class="perm-check"></td><td style="text-align:center"><input type="checkbox" class="perm-check"></td></tr>
+            <tr><td>查看全部批次数据</td><td style="text-align:center"><input type="checkbox" class="perm-check" checked disabled></td><td style="text-align:center"><input type="checkbox" class="perm-check" checked></td><td style="text-align:center"><input type="checkbox" class="perm-check"></td><td style="text-align:center"><input type="checkbox" class="perm-check" checked></td></tr>
+            <tr><td colspan="5" class="perm-group-header">✏️ 标注操作</td></tr>
+            <tr><td>执行标注（分配范围内）</td><td style="text-align:center"><input type="checkbox" class="perm-check" checked disabled></td><td style="text-align:center"><input type="checkbox" class="perm-check" checked></td><td style="text-align:center"><input type="checkbox" class="perm-check" checked></td><td style="text-align:center"><input type="checkbox" class="perm-check"></td></tr>
+            <tr><td>查看他人标注内容</td><td style="text-align:center"><input type="checkbox" class="perm-check" checked disabled></td><td style="text-align:center"><input type="checkbox" class="perm-check" checked></td><td style="text-align:center"><input type="checkbox" class="perm-check"></td><td style="text-align:center"><input type="checkbox" class="perm-check"></td></tr>
+            <tr><td colspan="5" class="perm-group-header">📊 结果与分析</td></tr>
+            <tr><td>查看结果汇总列表</td><td style="text-align:center"><input type="checkbox" class="perm-check" checked disabled></td><td style="text-align:center"><input type="checkbox" class="perm-check" checked></td><td style="text-align:center"><input type="checkbox" class="perm-check"></td><td style="text-align:center"><input type="checkbox" class="perm-check" checked></td></tr>
+            <tr><td>查看分析报告</td><td style="text-align:center"><input type="checkbox" class="perm-check" checked disabled></td><td style="text-align:center"><input type="checkbox" class="perm-check" checked></td><td style="text-align:center"><input type="checkbox" class="perm-check"></td><td style="text-align:center"><input type="checkbox" class="perm-check" checked></td></tr>
+            <tr><td>使用对话式分析(Chatbot)</td><td style="text-align:center"><input type="checkbox" class="perm-check" checked disabled></td><td style="text-align:center"><input type="checkbox" class="perm-check" checked></td><td style="text-align:center"><input type="checkbox" class="perm-check"></td><td style="text-align:center"><input type="checkbox" class="perm-check" checked></td></tr>
+            <tr><td>导出数据(Excel/PDF)</td><td style="text-align:center"><input type="checkbox" class="perm-check" checked disabled></td><td style="text-align:center"><input type="checkbox" class="perm-check" checked></td><td style="text-align:center"><input type="checkbox" class="perm-check"></td><td style="text-align:center"><input type="checkbox" class="perm-check" checked></td></tr>
+            <tr><td colspan="5" class="perm-group-header">⚙️ 系统管理</td></tr>
+            <tr><td>管理评分标准</td><td style="text-align:center"><input type="checkbox" class="perm-check" checked disabled></td><td style="text-align:center"><input type="checkbox" class="perm-check" checked></td><td style="text-align:center"><input type="checkbox" class="perm-check"></td><td style="text-align:center"><input type="checkbox" class="perm-check"></td></tr>
+            <tr><td>管理 Prompt</td><td style="text-align:center"><input type="checkbox" class="perm-check" checked disabled></td><td style="text-align:center"><input type="checkbox" class="perm-check" checked></td><td style="text-align:center"><input type="checkbox" class="perm-check"></td><td style="text-align:center"><input type="checkbox" class="perm-check"></td></tr>
+            <tr><td>🔐 权限管理（本页）</td><td style="text-align:center"><input type="checkbox" class="perm-check" checked disabled></td><td style="text-align:center"><input type="checkbox" class="perm-check"></td><td style="text-align:center"><input type="checkbox" class="perm-check"></td><td style="text-align:center"><input type="checkbox" class="perm-check"></td></tr>
+          </tbody>
+        </table>
+        <div style="margin-top:16px;display:flex;justify-content:flex-end;gap:8px">
+          <button class="btn btn-default">重置为默认</button>
+          <button class="btn btn-primary" onclick="alert('✅ 权限配置已保存并立即生效')">保存配置</button>
+        </div>
+      </div>
+
+    </div><!-- /perm-content -->
+  </div><!-- /perm-layout -->
+</div>
+
+    </div><!-- /content -->
+  </main>
+</div><!-- /app -->
+
+<!-- MODALS -->
+<div class="modal-overlay" id="modal-add-member">
+  <div class="modal">
+    <div class="modal-header"><h3>添加成员</h3><span class="modal-close" onclick="closeModal('modal-add-member')">✕</span></div>
+    <div class="modal-body">
+      <div class="form-item"><label class="form-label">百度账号 <span class="required">*</span></label><input class="form-input" placeholder="输入百度工号或邮箱前缀，如 zhangsan"></div>
+      <div class="form-item"><label class="form-label">分配角色 <span class="required">*</span></label>
+        <select class="form-select"><option value="">请选择角色</option><option>管理员</option><option>标注员</option><option>分析员</option></select>
+      </div>
+      <div class="form-item"><label class="form-label">可标注行业（标注员专属）</label>
+        <div class="checkbox-group">
+          <label class="checkbox-item"><input type="checkbox" onchange="this.closest('.checkbox-item').classList.toggle('checked',this.checked)"><span>医疗</span></label>
+          <label class="checkbox-item"><input type="checkbox" onchange="this.closest('.checkbox-item').classList.toggle('checked',this.checked)"><span>金融</span></label>
+          <label class="checkbox-item"><input type="checkbox" onchange="this.closest('.checkbox-item').classList.toggle('checked',this.checked)"><span>教育</span></label>
+          <label class="checkbox-item"><input type="checkbox" onchange="this.closest('.checkbox-item').classList.toggle('checked',this.checked)"><span>汽车</span></label>
+        </div>
+        <div style="font-size:12px;color:var(--text3);margin-top:6px">不选则默认无法参与任何标注批次</div>
+      </div>
+    </div>
+    <div class="modal-footer"><button class="btn btn-default" onclick="closeModal('modal-add-member')">取消</button><button class="btn btn-primary" onclick="closeModal('modal-add-member');alert('✅ 成员已添加，系统将发送如流通知')">确认添加</button></div>
+  </div>
+</div>
+
+<!-- MODALS -->
+<div class="modal-overlay" id="modal-create">
+  <div class="modal">
+    <div class="modal-header"><h3>新建标注集</h3><span class="modal-close" onclick="closeModal('modal-create')">✕</span></div>
+    <div class="modal-body">
+      <div class="form-item"><label class="form-label">批次名称 <span class="required">*</span></label><input class="form-input" placeholder="如：医疗行业_2026Q3_第1批"></div>
+      <div class="form-item"><label class="form-label">所属行业 <span class="required">*</span></label>
+        <select class="form-select"><option value="">请选择行业</option><option>医疗</option><option>金融</option><option>教育</option><option>汽车</option><option>电商</option></select>
+      </div>
+      <div class="form-item"><label class="form-label">上传文件 <span class="required">*</span></label>
+        <div style="border:2px dashed var(--border);border-radius:8px;padding:24px;text-align:center;cursor:pointer;background:#fafafa;transition:all .2s" onmouseenter="this.style.borderColor='#1677ff'" onmouseleave="this.style.borderColor='#d9d9d9'">
+          <div style="font-size:24px;margin-bottom:8px">📄</div>
+          <div style="font-size:14px;color:var(--text)">点击或拖拽上传</div>
+          <div style="font-size:12px;color:var(--text3);margin-top:4px">支持 .xlsx / .csv，最大 50MB，单批次最多 5000 条</div>
+          <button class="btn btn-default btn-sm" style="margin-top:12px">选择文件</button>
+        </div>
+        <div style="text-align:right;margin-top:4px"><button class="btn btn-text btn-sm">⬇ 下载标准模板</button></div>
+      </div>
+      <div class="form-item"><label class="form-label">备注</label><textarea class="form-textarea" placeholder="填写本批次的背景说明、抽样策略等..."></textarea></div>
+    </div>
+    <div class="modal-footer"><button class="btn btn-default" onclick="closeModal('modal-create')">取消</button><button class="btn btn-primary">确认导入</button></div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-distribute">
+  <div class="modal">
+    <div class="modal-header"><h3>分发任务</h3><span class="modal-close" onclick="closeModal('modal-distribute')">✕</span></div>
+    <div class="modal-body">
+      <div style="background:#f0f5ff;border-radius:6px;padding:10px 12px;margin-bottom:16px;font-size:13px;color:var(--text2)">
+        📋 <strong>汽车行业_2026Q1_第2批</strong> · 共 60 条数据
+      </div>
+      <div class="form-item"><label class="form-label">选择标注员 <span class="required">*</span></label>
+        <div class="checkbox-group">
+          <label class="checkbox-item checked"><input type="checkbox" checked onchange="this.closest('.checkbox-item').classList.toggle('checked',this.checked)"><span>张三 (已完成 245 条，今日空闲)</span></label>
+          <label class="checkbox-item checked"><input type="checkbox" checked onchange="this.closest('.checkbox-item').classList.toggle('checked',this.checked)"><span>李四 (已完成 198 条)</span></label>
+          <label class="checkbox-item"><input type="checkbox" onchange="this.closest('.checkbox-item').classList.toggle('checked',this.checked)"><span>王五 (已完成 212 条)</span></label>
+          <label class="checkbox-item checked"><input type="checkbox" checked onchange="this.closest('.checkbox-item').classList.toggle('checked',this.checked)"><span>dingbohao (管理员)</span></label>
+        </div>
+      </div>
+      <div class="form-item"><label class="form-label">分发方式</label>
+        <div style="display:flex;gap:12px">
+          <label style="display:flex;align-items:center;gap:6px;cursor:pointer"><input type="radio" name="dist-type" value="even" checked> 均分（每人约 20 条）</label>
+          <label style="display:flex;align-items:center;gap:6px;cursor:pointer"><input type="radio" name="dist-type" value="custom"> 指定每人数量</label>
+        </div>
+      </div>
+      <div style="background:#e6f4ff;border-radius:6px;padding:10px 12px;font-size:12px;color:var(--text2)">
+        📊 预览：60 条 ÷ 3 人 = 每人 20 条（张三：1-20，李四：21-40，dingbohao：41-60）
+      </div>
+      <div class="form-item" style="margin-top:14px"><label class="form-label">截止时间（可选）</label><input type="datetime-local" class="form-input"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-default" onclick="closeModal('modal-distribute')">取消</button>
+      <button class="btn btn-primary" onclick="closeModal('modal-distribute');alert('✅ 分发成功！已通知 3 名标注员')">确认分发</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-simulate">
+  <div class="modal" style="width:600px">
+    <div class="modal-header"><h3>模拟生成</h3><span class="modal-close" onclick="closeModal('modal-simulate')">✕</span></div>
+    <div class="modal-body">
+      <div class="form-item"><label class="form-label">行业</label><input class="form-input" value="医疗行业" readonly style="background:#f5f5f5"></div>
+      <div class="form-item"><label class="form-label">使用 Prompt 版本</label><select class="form-select"><option>v2.3（最新发布）</option><option>v2.2</option><option>v2.1</option><option>v2.3-draft（草稿）</option></select></div>
+      <div class="form-item"><label class="form-label">选择标注集</label><select class="form-select"><option>医疗行业_2026Q2_第3批（100条）</option><option>手动输入 query</option></select></div>
+      <div class="form-item"><label class="form-label">模拟条数</label><input type="number" class="form-input" value="20" min="1" max="100"><div style="font-size:12px;color:var(--text3);margin-top:4px">最多 100 条，将随机抽取</div></div>
+    </div>
+    <div class="modal-footer"><button class="btn btn-default" onclick="closeModal('modal-simulate')">取消</button><button class="btn btn-primary" onclick="closeModal('modal-simulate');alert('🔮 模拟生成任务已提交，预计 2-3 分钟完成，完成后可在标注集管理查看结果')">开始模拟生成</button></div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-prompt-edit">
+  <div class="modal" style="width:640px">
+    <div class="modal-header"><h3>编辑 Prompt · 医疗行业</h3><span class="modal-close" onclick="closeModal('modal-prompt-edit')">✕</span></div>
+    <div class="modal-body">
+      <div style="font-size:12px;color:var(--text3);margin-bottom:12px">可用变量：<code style="background:#f5f5f5;padding:2px 6px;border-radius:3px">{query}</code> <code style="background:#f5f5f5;padding:2px 6px;border-radius:3px">{live_summary}</code> <code style="background:#f5f5f5;padding:2px 6px;border-radius:3px">{live_script}</code> <code style="background:#f5f5f5;padding:2px 6px;border-radius:3px">{industry}</code></div>
+      <div class="form-item"><label class="form-label">TTS Prompt <span class="required">*</span></label>
+        <textarea class="form-textarea" style="height:130px;font-family:monospace;font-size:12px">你是一个{industry}行业直播间的数字人助手。
+根据用户的搜索词（query），结合直播间内容摘要（live_summary），
+生成一段简洁、自然、互动性强的口播内容（TTS）。
+
+要求：
+1. 直接回应用户的搜索意图，不超过80字
+2. 自然引出直播间的核心服务，融入服务推荐话术
+3. 语气亲切，避免过度营销感
+4. 不得出现虚假信息
+
+搜索词：{query}
+直播间摘要：{live_summary}</textarea>
+      </div>
+      <div class="form-item"><label class="form-label">IM Prompt <span class="required">*</span></label>
+        <textarea class="form-textarea" style="height:100px;font-family:monospace;font-size:12px">根据搜索词{query}，生成一条简短的评论区互动内容（IM），不超过40字，互动性强，引导用户参与。</textarea>
+      </div>
+      <div class="form-item"><label class="form-label">修改说明 <span class="required">*</span></label><input class="form-input" placeholder="说明本次修改的内容和目的..."></div>
+    </div>
+    <div class="modal-footer"><button class="btn btn-default" onclick="closeModal('modal-prompt-edit')">取消</button><button class="btn btn-default">保存草稿</button><button class="btn btn-primary" onclick="closeModal('modal-prompt-edit');alert('✅ Prompt v2.4 已发布')">发布新版本</button></div>
+  </div>
+</div>
+
+
+<script>
+// ===== Permission Tab Switch =====
+function switchPermTab(id) {
+  document.querySelectorAll('.perm-tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.perm-section').forEach(s => s.classList.remove('active'));
+  document.getElementById('perm-' + id).classList.add('active');
+  var tabs = {members:0, roles:1, matrix:2};
+  document.querySelectorAll('.perm-tab')[tabs[id]].classList.add('active');
+}
+function toggleSwitch(el) {
+  el.classList.toggle('on');
+  var label = el.nextElementSibling;
+  if (el.classList.contains('on')) {
+    label.textContent = '启用'; label.style.color = 'var(--success)';
+  } else {
+    label.textContent = '停用'; label.style.color = 'var(--text3)';
+  }
+}
+function onRoleChange(sel) {
+  alert('✅ 角色已更新为：' + sel.value + '，权限立即生效');
+}
+
+// ===== Navigation =====
+function switchPage(id) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  const page = document.getElementById('page-' + id);
+  if (page) page.classList.add('active');
+  const nav = document.querySelector('[data-page="' + id + '"]');
+  if (nav) nav.classList.add('active');
+}
+document.querySelectorAll('.nav-item').forEach(item => {
+  item.addEventListener('click', () => switchPage(item.dataset.page));
+});
+
+// ===== Role Switch (removed - using InfoFlow SSO) =====
+
+// ===== Modal =====
+function openModal(id) {
+  document.getElementById(id).classList.add('open');
+}
+function closeModal(id) {
+  document.getElementById(id).classList.remove('open');
+}
+document.querySelectorAll('.modal-overlay').forEach(overlay => {
+  overlay.addEventListener('click', e => {
+    if (e.target === overlay) overlay.classList.remove('open');
+  });
+});
+
+// ===== Collapsible =====
+function toggleCollapse(id) {
+  const el = document.getElementById('collapse-' + id);
+  const arrow = document.getElementById('arrow-' + id);
+  el.classList.toggle('open');
+  arrow.textContent = el.classList.contains('open') ? '▼' : '▶';
+}
+
+// ===== Score Buttons =====
+var scores = {1: null, 2: null, 3: null, 4: null};
+function selectScore(dim, val) {
+  scores[dim] = val;
+  document.querySelectorAll('[data-dim="' + dim + '"]').forEach(btn => {
+    btn.classList.toggle('selected', parseInt(btn.dataset.val) === val);
+  });
+  const hints = [
+    ['','内容与query完全无关，存在严重错误','内容有关联但相关性弱，主要信息点有遗漏','内容与query关联度较高，主要信息匹配','内容与query高度相关，精准回应用户搜索意图'],
+    ['','TTS/IM与直播间内容完全无关','与直播间有少量关联但主要内容不一致','与直播间内容基本一致，核心信息吻合','与直播间内容高度一致，无偏差'],
+    ['','服务推荐话术与直播间推荐完全不符','服务推荐有部分对应但差异明显','服务推荐基本与直播间一致，少量偏差','服务推荐话术与直播间推荐高度一致'],
+    ['','语言混乱，无互动性，严重语法错误','语言较为生硬，互动性弱，有语法问题','语言基本简明，有互动引导，偶有瑕疵','语言简明精炼，互动性强，语法规范']
+  ];
+  const hintEl = document.querySelectorAll('.score-hint');
+  if (hintEl[dim-1]) hintEl[dim-1].textContent = hints[dim-1][val];
+}
+
+// ===== Uncertain Toggle =====
+function toggleUncertain() {
+  const checked = document.getElementById('uncertain-check').checked;
+  document.getElementById('uncertain-reason-wrap').style.display = checked ? 'block' : 'none';
+}
+
+// ===== Anno Navigation =====
+var annoData = [
+  {query:'保险理财产品推荐', tts:'您好，针对您咨询的保险理财产品，我们为您精选了多款高性价比产品，年化收益3.5%-5.2%，风险等级R2，适合稳健型投资者...', im:'【稳健理财推荐】想买保险理财的朋友举手！专属客经理在线！'},
+  {query:'网课平台哪个好', tts:'大家好！说到网课平台，我们平台有超过500位名师，覆盖K12到职业培训全阶段，7天免费试听，现在报名还有早鸟优惠！', im:'哪个网课平台好？来问我！在线教育10年经验，帮你避坑！'},
+  {query:'二手车置换补贴政策 2026', tts:'您好！如果您正在考虑二手车置换，现在是最佳时机！今年国家出台了二手车置换补贴新政，购买符合条件的新能源车最高可享受1万元补贴。', im:'【置换补贴高达1万！】朋友们，国家补贴来啦～有没有想换车的？现在置换最划算！'},
+  {query:'中医养生调理推荐', tts:'传统中医养生，让您身体更健康！我们提供专业中医调理服务，包括针灸、推拿、药膳等，已服务10万+客户。', im:'中医养生正当时！身体有不适的来问问，专业医师在线解答'},
+  {query:'理财产品年化收益对比', tts:'为您精心挑选高收益低风险理财产品，当前热门产品年化收益4.2%-6.8%，支持T+1灵活赎回，适合追求稳健收益的您。', im:'理财产品对比，哪个收益高？我来告诉你！'}
+];
+var annoIndex = 2;
+function annoNav(dir) {
+  annoIndex = (annoIndex + dir + annoData.length) % annoData.length;
+  var d = annoData[annoIndex];
+  document.getElementById('disp-query').textContent = d.query;
+  document.getElementById('disp-tts').textContent = d.tts;
+  document.getElementById('disp-im').textContent = d.im;
+  document.getElementById('anno-cur').textContent = annoIndex + 1;
+  var pct = Math.round((annoIndex + 1) / annoData.length * 100);
+  document.getElementById('anno-prog').style.width = pct + '%';
+  document.getElementById('anno-prog-text').textContent = (annoIndex + 1) + '/' + annoData.length + ' 完成';
+  // reset scores display
+  document.querySelectorAll('.score-btn').forEach(b => b.classList.remove('selected'));
+  scores = {1:null,2:null,3:null,4:null};
+}
+function saveAnno(next) {
+  var missing = [];
+  for (var i=1;i<=4;i++) { if (!scores[i]) missing.push('维度'+i); }
+  if (next && missing.length) {
+    alert('⚠️ 请完成以下维度的评分：' + missing.join('、'));
+    return;
+  }
+  if (next) {
+    annoNav(1);
+  } else {
+    alert('✅ 暂存成功');
+  }
+}
+
+// ===== Detail Toggle =====
+function toggleDetail(id) {
+  var row = document.getElementById(id);
+  row.style.display = row.style.display === 'none' ? 'table-row' : 'none';
+}
+
+// ===== Criteria Dim Switch =====
+var dimTitles = [
+  '维度1：Query-Content 相关性',
+  '维度2：Content-直播间内容一致性',
+  '维度3：Content服务推荐-直播间服务推荐一致性',
+  '维度4：语言指标（简明扼要性、互动性、语法规范）'
+];
+var dimVers = ['当前版本：v2.1 · 2026-06-01 发布','当前版本：v1.9 · 2026-05-20 发布','当前版本：v2.0 · 2026-05-15 发布','当前版本：v1.6 · 2026-04-10 发布'];
+function switchDim(idx) {
+  document.querySelectorAll('.dim-tab').forEach((t,i) => t.classList.toggle('active', i===idx));
+  document.getElementById('criteria-title').textContent = dimTitles[idx];
+  document.getElementById('criteria-ver').textContent = dimVers[idx];
+}
+
+function publishCriteria() {
+  alert('✅ 评分标准已发布！已通知 8 名标注员，他们下次打开标注页时将看到更新提醒。');
+}
+
+// ===== Chatbot =====
+var aiReplies = {
+  '哪个维度得分最低，可能原因是什么？': '根据当前 980 条标注数据分析：\n\n**维度3（服务推荐一致性）得分最低，均值 2.87**，明显低于其他维度（维度1: 3.12，维度2: 3.31，维度4: 3.18）。\n\n可能原因分析：\n1. 📝 Prompt 中服务推荐话术生成质量不稳定，容易与直播脚本中的实际服务描述产生偏差\n2. 🏥 医疗行业样本中，直播脚本服务推荐较复杂（含多个套餐），TTS难以覆盖全部要点\n3. 💡 建议：在维度3对应的 Prompt 中增加"严格引用直播脚本中的服务推荐内容"的约束',
+  '不确定标记较多的条目有什么共同特征？': '对 45 条"不确定"标记条目分析：\n\n**共同特征：**\n• 📌 **直播间 Summary 信息较少**（平均字数 < 50字），导致标注员无法充分判断一致性（占 62%）\n• 🔀 **多行业混合内容**：TTS 中出现跨行业词汇，如医疗行业中混入金融/汽车相关表述（占 31%）\n• ⚡ **服务推荐话术过长**，标注员难以与直播脚本对应（占 28%）\n\n**建议：** 完善标注集的 Summary 字段，同时对标注员进行多行业混杂场景的培训',
+  '基于当前标注结果，给出Prompt优化方向建议': '基于 980 条标注结果，给出以下 Prompt 优化建议：\n\n**1. 维度3（服务推荐一致性）- 高优先级**\n   - 在 TTS Prompt 中增加约束：必须从 `{live_script}` 的服务推荐部分提取至少一个具体服务项\n   - 示例新增指令："必须包含直播脚本中提到的以下服务之一：{service_list}"\n\n**2. 维度1（Query-Content相关性）- 中优先级**\n   - 1分条目分析显示，部分 TTS 出现行业混淆，建议增加行业约束："仅回应{industry}行业相关需求"\n\n**3. 语言指标 - 建议优化 IM 互动性**\n   - IM 中互动性引导词（"举手"、"来问我"等）在高分条目中出现频率更高，建议在 IM Prompt 中明确要求添加互动引导'
+};
+function sendChat() {
+  var input = document.getElementById('chat-input');
+  var msg = input.value.trim();
+  if (!msg) return;
+  addMsg(msg, 'user');
+  input.value = '';
+  // typing indicator
+  var typingId = 'typing-' + Date.now();
+  var typingDiv = document.createElement('div');
+  typingDiv.className = 'msg ai';
+  typingDiv.id = typingId;
+  typingDiv.innerHTML = '<div class="typing"><span></span><span></span><span></span></div>';
+  document.getElementById('chat-messages').appendChild(typingDiv);
+  scrollChat();
+  setTimeout(function() {
+    var t = document.getElementById(typingId);
+    if (t) t.remove();
+    var reply = aiReplies[msg] || '我理解你的问题。基于当前 980 条标注数据分析，相关维度分布均值在 2.87-3.31 之间，整体质量中等偏上。如需更具体的分析，可以尝试上面的快捷问题，或描述你最关心的具体问题维度。';
+    addMsg(reply, 'ai');
+  }, 1500);
+}
+function sendQuick(q) {
+  document.getElementById('chat-input').value = q;
+  sendChat();
+}
+function addMsg(text, type) {
+  var div = document.createElement('div');
+  div.className = 'msg ' + type;
+  var bubble = text.replace(/\n/g,'<br>').replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>');
+  div.innerHTML = '<div class="msg-bubble">' + bubble + '</div><div class="msg-time">' + (type === 'user' ? 'dingbohao' : 'AI 助手') + '</div>';
+  document.getElementById('chat-messages').appendChild(div);
+  scrollChat();
+}
+function scrollChat() {
+  var el = document.getElementById('chat-messages');
+  el.scrollTop = el.scrollHeight;
+}
+function chatEnter(e) {
+  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendChat(); }
+}
+
+// ===== Table Filter =====
+function filterTable(val) {
+  var rows = document.querySelectorAll('#datasets-table tbody tr');
+  rows.forEach(r => {
+    r.style.display = r.textContent.toLowerCase().includes(val.toLowerCase()) ? '' : 'none';
+  });
+}
+</script>
+</body>
+</html>
